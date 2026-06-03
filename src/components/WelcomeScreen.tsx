@@ -38,8 +38,8 @@ export default function WelcomeScreen({ onStart }: WelcomeScreenProps) {
             transition={{ duration: 0.5 }}
             className="space-y-3"
           >
-            <span className="text-xs uppercase tracking-widest font-semibold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded">
-              Ministero dell'Istruzione e del Merito
+            <span className="text-xs uppercase tracking-widest font-bold text-red-600 bg-red-50 px-2.5 py-1 rounded">
+              NON INSERIRE INFORMAZIONI SENSIBILI
             </span>
             <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-slate-900 leading-tight">
               Il Colloquio <br />
@@ -96,13 +96,13 @@ export default function WelcomeScreen({ onStart }: WelcomeScreenProps) {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <label htmlFor="student-name" className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                Il tuo nome e cognome
+                Il tuo nome
               </label>
               <input
                 id="student-name"
                 type="text"
                 required
-                placeholder="es. Mario Rossi"
+                placeholder="es. Mario"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-800 placeholder-slate-400 focus:border-indigo-600 focus:outline-none focus:ring-1 focus:ring-indigo-600 transition"
@@ -130,10 +130,10 @@ export default function WelcomeScreen({ onStart }: WelcomeScreenProps) {
 
       {/* Bottom Footer Note */}
       <div className="w-full max-w-4xl mx-auto py-6 border-t border-slate-200 text-center text-xs text-slate-500 space-y-1">
-        <p className="font-medium text-slate-700">
+        <p className="font-medium text-slate-750">
           Questa simulazione segue la struttura del colloquio orale prevista dall'O.M. n. 54 del 26 marzo 2026
         </p>
-        <p>Docente Coordinatore: prof. Gardenal Mauro — a.s. 2025/2026</p>
+        <p>Autore di IL COLLOQUIO: prof. Gardenal Mauro — a.s. 2025/2026</p>
       </div>
     </div>
   );

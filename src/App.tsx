@@ -626,7 +626,7 @@ export default function App() {
       {/* Bottom Footer Line */}
       <footer className="h-7 bg-slate-800 flex items-center px-4 md:px-8 justify-between shrink-0 text-slate-400 select-none z-50">
         <span className="text-[10px] tracking-wider font-mono">O.M. N. 54 DEL 26 MARZO 2026 — COLLOQUIO MATURITÀ</span>
-        <span className="text-[10px] uppercase tracking-widest italic font-mono hidden sm:inline">Ministero dell'Istruzione e del Merito</span>
+        <span className="text-[10px] uppercase tracking-widest font-bold text-red-500 hidden sm:inline">NON INSERIRE INFORMAZIONI SENSIBILI</span>
       </footer>
     </div>
   );
