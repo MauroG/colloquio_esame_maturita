@@ -1,0 +1,6 @@
+{
+  "name": "Il Colloquio",
+  "description": "Simulatore di colloquio orale per l'Esame di Stato della 5AT - Maturità 2026",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
