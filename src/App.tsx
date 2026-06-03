@@ -23,7 +23,7 @@ const SpeechRecognition = (window as any).SpeechRecognition || (window as any).w
 let recognition: any = null;
 if (SpeechRecognition) {
   recognition = new SpeechRecognition();
-  recognition.continuous = false;
+  recognition.continuous = true;
   recognition.interimResults = false;
   recognition.lang = "it-IT";
 }
@@ -38,6 +38,7 @@ export default function App() {
   // Voice synthesis states (TTS)
   const [isTtsEnabled, setIsTtsEnabled] = useState(true);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [selectedVoiceName, setSelectedVoiceName] = useState("");
   
   // Voice recognition states (STT)
   const [isListening, setIsListening] = useState(false);
@@ -51,9 +52,39 @@ export default function App() {
   useEffect(() => {
     if (typeof window !== "undefined" && window.speechSynthesis) {
       const loadVoices = () => {
-        setVoices(window.speechSynthesis.getVoices());
+        const availableVoices = window.speechSynthesis.getVoices();
+        setVoices(availableVoices);
+        
+        // Auto-select the best Italian voice
+        const it = availableVoices.filter(v => v.lang.toLowerCase().replace("_", "-").startsWith("it"));
+        if (it.length > 0) {
+          setSelectedVoiceName((prev) => {
+            if (prev && it.some(v => v.name === prev)) return prev;
+            
+            // Priority ordering for smooth natural italian voices
+            let bestVoice = it.find(v => v.name.toLowerCase().includes("natural") && v.name.toLowerCase().includes("online"));
+            if (!bestVoice) bestVoice = it.find(v => v.name.toLowerCase().includes("natural"));
+            if (!bestVoice) bestVoice = it.find(v => v.name.toLowerCase().includes("online"));
+            if (!bestVoice) {
+              const preferredNames = ["alice", "luca", "paola", "federica", "siri", "google", "elsa", "samuele", "cosimo"];
+              for (const pref of preferredNames) {
+                const found = it.find(v => v.name.toLowerCase().includes(pref));
+                if (found) {
+                  bestVoice = found;
+                  break;
+                }
+              }
+            }
+            if (!bestVoice) bestVoice = it[0];
+            return bestVoice.name;
+          });
+        }
       };
+      
       loadVoices();
+      if (window.speechSynthesis.onvoiceschanged !== undefined) {
+        window.speechSynthesis.onvoiceschanged = loadVoices;
+      }
       window.speechSynthesis.addEventListener("voiceschanged", loadVoices);
       return () => {
         window.speechSynthesis.removeEventListener("voiceschanged", loadVoices);
@@ -86,14 +117,30 @@ export default function App() {
     utterance.rate = 1.0;
     utterance.pitch = 1.0;
 
-    // Pick a formal or highly structured Italian voice if possible
-    const itVoices = voices.filter(v => v.lang.startsWith("it"));
-    let formalVoice = itVoices.find(v => v.name.toLowerCase().includes("premium"));
-    if (!formalVoice) formalVoice = itVoices.find(v => v.name.toLowerCase().includes("google"));
-    if (!formalVoice) formalVoice = itVoices[0]; // fallback to first italian voice
+    // Pick selected voice or fall back to high priority smooth italian voice
+    const itVoices = voices.filter(v => v.lang.toLowerCase().replace("_", "-").startsWith("it"));
+    let currentVoice = itVoices.find(v => v.name === selectedVoiceName);
 
-    if (formalVoice) {
-      utterance.voice = formalVoice;
+    if (!currentVoice) {
+      let bestVoice = itVoices.find(v => v.name.toLowerCase().includes("natural") && v.name.toLowerCase().includes("online"));
+      if (!bestVoice) bestVoice = itVoices.find(v => v.name.toLowerCase().includes("natural"));
+      if (!bestVoice) bestVoice = itVoices.find(v => v.name.toLowerCase().includes("online"));
+      if (!bestVoice) {
+        const preferredNames = ["alice", "luca", "paola", "federica", "siri", "google", "elsa", "samuele", "cosimo"];
+        for (const pref of preferredNames) {
+          const found = itVoices.find(v => v.name.toLowerCase().includes(pref));
+          if (found) {
+            bestVoice = found;
+            break;
+          }
+        }
+      }
+      if (!bestVoice) bestVoice = itVoices[0];
+      currentVoice = bestVoice;
+    }
+
+    if (currentVoice) {
+      utterance.voice = currentVoice;
     }
 
     window.speechSynthesis.speak(utterance);
@@ -116,13 +163,18 @@ export default function App() {
       };
 
       recognition.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
+        const resultIndex = event.resultIndex;
+        const transcript = event.results[resultIndex][0].transcript;
         if (transcript) {
-          setInputValue((prev) => (prev ? `${prev} ${transcript}` : transcript));
+          setInputValue((prev) => {
+            const trimmed = prev.trim();
+            const trimmedTrans = transcript.trim();
+            return trimmed ? `${trimmed} ${trimmedTrans}` : trimmedTrans;
+          });
         }
       };
     }
-  }, [voices]);
+  }, []);
 
   const toggleListening = () => {
     if (!recognition) {
@@ -130,11 +182,37 @@ export default function App() {
       return;
     }
 
+    // Cancel text speaking to avoid feedback and clean microphone capture
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+
     if (isListening) {
-      recognition.stop();
+      try {
+        recognition.stop();
+      } catch (err) {
+        console.error("Errore durante l'interruzione del riconoscimento:", err);
+      }
+      setIsListening(false);
     } else {
-      // Prompt standard browser check for mic permissions
-      recognition.start();
+      try {
+        recognition.start();
+      } catch (err) {
+        console.error("Errore durante l'avvio del riconoscimento:", err);
+        // Force reset or stop then start
+        try {
+          recognition.stop();
+          setTimeout(() => {
+            try {
+              recognition.start();
+            } catch (retryErr) {
+              console.error("Secondo tentativo fallito:", retryErr);
+            }
+          }, 300);
+        } catch (stopErr) {
+          console.error(stopErr);
+        }
+      }
     }
   };
 
@@ -360,6 +438,39 @@ export default function App() {
         </div>
         
         <div className="flex items-center gap-2 sm:gap-4">
+          {/* Choice of Voice dropdown */}
+          {(() => {
+            const itVoices = voices.filter(v => v.lang.toLowerCase().replace("_", "-").startsWith("it"));
+            if (itVoices.length > 1 && isTtsEnabled) {
+              return (
+                <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 font-mono hidden md:inline">Voce:</span>
+                  <select
+                    value={selectedVoiceName}
+                    onChange={(e) => {
+                      setSelectedVoiceName(e.target.value);
+                      const previewUtterance = new SpeechSynthesisUtterance("Nuova voce selezionata");
+                      previewUtterance.lang = "it-IT";
+                      const selected = itVoices.find(v => v.name === e.target.value);
+                      if (selected) previewUtterance.voice = selected;
+                      window.speechSynthesis.cancel();
+                      window.speechSynthesis.speak(previewUtterance);
+                    }}
+                    className="text-[11px] font-bold text-slate-600 bg-transparent border-none outline-none max-w-[100px] sm:max-w-[140px] truncate cursor-pointer"
+                    title="Seleziona la Voce del Presidente d'Esame"
+                  >
+                    {itVoices.map((v) => (
+                      <option key={v.name} value={v.name}>
+                        {v.name.replace(/Google/gi, "Google").replace(/Microsoft/gi, "MS").replace(/Italian\s*\(Italy\)/gi, "IT").replace(/Italiano/gi, "IT").replace(/Desktop/gi, "").trim()}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              );
+            }
+            return null;
+          })()}
+
           {/* Audio read-aloud toggle */}
           <button
             onClick={() => {
